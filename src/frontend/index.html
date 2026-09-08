@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResQTwin | Digital Twin</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #0a0918;
+    --bg-2: #0f0e22;
+    --panel: rgba(255,255,255,0.035);
+    --panel-strong: rgba(255,255,255,0.055);
+    --border: rgba(148,132,255,0.16);
+    --border-soft: rgba(255,255,255,0.08);
+    --violet: #7c5cff;
+    --violet-bright: #9b83ff;
+    --violet-dim: #4c3fa3;
+    --cyan: #63e8ff;
+    --text: #f1eefc;
+    --text-dim: #8e88ab;
+    --text-faint: #5f5a7d;
+    --danger: #ff5c72;
+    --danger-glow: rgba(255,92,114,0.35);
+    --warn: #ffb547;
+    --ok: #35e29a;
+    --radius-lg: 22px;
+    --radius-md: 14px;
+    --radius-sm: 9px;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html{ background:var(--bg); }
+
+  body{
+    font-family:'Space Grotesk', Arial, sans-serif;
+    background:
+      radial-gradient(760px 480px at 8% -8%, rgba(124,92,255,0.30), transparent 60%),
+      radial-gradient(620px 420px at 96% 8%, rgba(99,232,255,0.14), transparent 55%),
+      radial-gradient(900px 700px at 50% 115%, rgba(124,92,255,0.14), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .mono{ font-family:'JetBrains Mono', ui-monospace, monospace; }
+
+  /* ---------- Header ---------- */
+
+  header{
+    padding: 34px clamp(20px, 4vw, 56px) 26px;
+    position:relative;
+  }
+
+  .brand-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    max-width:1400px;
+    margin:0 auto;
+  }
+
+  .wordmark{
+    font-size: clamp(32px, 4.4vw, 46px);
+    font-weight:700;
+    letter-spacing:-0.03em;
+    line-height:1;
+    background: linear-gradient(180deg, #ffffff 0%, #c9c2f7 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+
+  .wordmark span{
+    color: var(--violet-bright);
+    -webkit-text-fill-color: var(--violet-bright);
+  }
+
+  .tagline{
+    margin-top:6px;
+    color: var(--text-dim);
+    font-size:14.5px;
+    letter-spacing:0.01em;
+  }
+
+  .header-meta{
+    text-align:right;
+    color:var(--text-dim);
+    font-size:13px;
+  }
+
+  .header-meta .clock{
+    font-size:20px;
+    color:var(--text);
+    font-weight:600;
+  }
+
+  /* ---------- Layout ---------- */
+
+  .container{
+    padding: 0 clamp(20px, 4vw, 56px) 60px;
+    max-width:1400px;
+    margin:auto;
+  }
+
+  .status-bar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:14px;
+    background: var(--panel);
+    border:1px solid var(--border-soft);
+    backdrop-filter: blur(18px);
+    padding: 16px 24px;
+    border-radius: 999px;
+    margin-bottom: 26px;
+  }
+
+  .status-bar .chip-group{
+    display:flex;
+    align-items:center;
+    gap:22px;
+    flex-wrap:wrap;
+  }
+
+  .chip-label{
+    color:var(--text-faint);
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:0.09em;
+    margin-bottom:3px;
+  }
+
+  .chip-value{
+    font-weight:600;
+    font-size:15px;
+  }
+
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    padding:8px 16px;
+    border-radius:999px;
+    background: rgba(53,226,154,0.10);
+    border:1px solid rgba(53,226,154,0.35);
+    color:var(--ok);
+    font-weight:600;
+    font-size:13.5px;
+  }
+
+  .status-pill.offline{
+    background: rgba(255,92,114,0.10);
+    border-color: rgba(255,92,114,0.4);
+    color: var(--danger);
+  }
+
+  .status-pill.connecting{
+    background: rgba(255,181,71,0.10);
+    border-color: rgba(255,181,71,0.4);
+    color: var(--warn);
+  }
+
+  .dot{
+    width:8px; height:8px;
+    border-radius:50%;
+    background: currentColor;
+    box-shadow: 0 0 10px currentColor;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes pulse{
+    0%,100%{ opacity:1; transform:scale(1); }
+    50%{ opacity:0.45; transform:scale(0.75); }
+  }
+
+  /* ---------- Dashboard grid ---------- */
+
+  .dashboard{
+    display:grid;
+    grid-template-columns: 1.7fr 1fr;
+    gap:22px;
+    align-items:start;
+  }
+
+  .panel{
+    background: var(--panel);
+    border:1px solid var(--border-soft);
+    backdrop-filter: blur(18px);
+    border-radius: var(--radius-lg);
+    padding:24px;
+  }
+
+  .panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:18px;
+  }
+
+  .panel-head h2{
+    font-size:16.5px;
+    font-weight:600;
+    letter-spacing:-0.01em;
+  }
+
+  .panel-head .sub{
+    font-size:12px;
+    color:var(--text-faint);
+  }
+
+  /* ---------- Map / HUD ---------- */
+
+  .map-wrap{
+    position:relative;
+    border-radius: var(--radius-md);
+    overflow:hidden;
+    height: 460px;
+    background:
+      linear-gradient(rgba(124,92,255,0.10) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,92,255,0.10) 1px, transparent 1px),
+      linear-gradient(160deg, #131029, #0b0a1a 70%);
+    background-size: 42px 42px, 42px 42px, cover;
+    border: 1px solid var(--border);
+  }
+
+  .map-wrap::before{
+    /* radar sweep */
+    content:"";
+    position:absolute;
+    inset:-40%;
+    background: conic-gradient(from 0deg, rgba(124,92,255,0.22), transparent 26%);
+    animation: sweep 6s linear infinite;
+    pointer-events:none;
+    mix-blend-mode: screen;
+  }
+
+  @keyframes sweep{
+    to{ transform: rotate(360deg); }
+  }
+
+  .corner{
+    position:absolute;
+    width:22px; height:22px;
+    border: 2px solid var(--violet-bright);
+    opacity:0.7;
+  }
+  .corner.tl{ top:12px; left:12px; border-right:none; border-bottom:none; border-top-left-radius:6px; }
+  .corner.tr{ top:12px; right:12px; border-left:none; border-bottom:none; border-top-right-radius:6px; }
+  .corner.bl{ bottom:12px; left:12px; border-right:none; border-top:none; border-bottom-left-radius:6px; }
+  .corner.br{ bottom:12px; right:12px; border-left:none; border-top:none; border-bottom-right-radius:6px; }
+
+  .robot{
+    position:absolute;
+    width:20px; height:20px;
+    background: radial-gradient(circle at 35% 30%, #d8ccff, var(--violet-bright) 55%, var(--violet-dim) 100%);
+    border-radius:50%;
+    transform: translate(-50%,-50%);
+    transition: left 0.6s ease, top 0.6s ease;
+    box-shadow: 0 0 0 6px rgba(124,92,255,0.14), 0 0 22px rgba(124,92,255,0.75);
+    z-index:2;
+  }
+
+  .robot::after{
+    content:"";
+    position:absolute;
+    inset:-10px;
+    border-radius:50%;
+    border:1px solid rgba(155,131,255,0.5);
+    animation: ring 2.2s ease-out infinite;
+  }
+
+  @keyframes ring{
+    0%{ transform:scale(0.6); opacity:0.9; }
+    100%{ transform:scale(2.4); opacity:0; }
+  }
+
+  .hazard{
+    position:absolute;
+    width:18px; height:18px;
+    background: radial-gradient(circle at 35% 30%, #ffd7dc, var(--danger) 60%);
+    border-radius:50%;
+    transform: translate(-50%,-50%);
+    box-shadow: 0 0 0 7px var(--danger-glow), 0 0 24px rgba(255,92,114,0.8);
+    display:none;
+    z-index:2;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:10px;
+  }
+
+  .coord-row{
+    display:flex;
+    gap:12px;
+    margin-top:16px;
+  }
+
+  .coord-tile{
+    flex:1;
+    background: var(--panel-strong);
+    border:1px solid var(--border-soft);
+    border-radius: var(--radius-sm);
+    padding:12px 16px;
+    text-align:center;
+  }
+
+  .coord-tile .k{
+    font-size:11px;
+    letter-spacing:0.1em;
+    color:var(--text-faint);
+    text-transform:uppercase;
+    margin-bottom:4px;
+  }
+
+  .coord-tile .v{
+    font-size:22px;
+    font-weight:600;
+    color:var(--cyan);
+  }
+
+  /* ---------- Sensor grid ---------- */
+
+  .sensor-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .sensor{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background: var(--panel-strong);
+    border:1px solid var(--border-soft);
+    border-radius: var(--radius-sm);
+    padding:13px 16px;
+  }
+
+  .sensor-left{
+    display:flex;
+    align-items:center;
+    gap:11px;
+  }
+
+  .sensor-dot{
+    width:8px; height:8px;
+    border-radius:50%;
+    background: var(--ok);
+    box-shadow: 0 0 8px var(--ok);
+    flex-shrink:0;
+  }
+
+  .sensor-dot.warn{ background:var(--warn); box-shadow:0 0 8px var(--warn); }
+  .sensor-dot.danger{ background:var(--danger); box-shadow:0 0 8px var(--danger); }
+
+  .sensor-label{
+    font-size:13.5px;
+    color:var(--text-dim);
+  }
+
+  .sensor-value{
+    font-size:16.5px;
+    font-weight:600;
+    color:var(--text);
+  }
+
+  .sensor-value .unit{
+    font-size:12px;
+    color:var(--text-faint);
+    font-weight:500;
+    margin-left:2px;
+  }
+
+  /* ---------- Alert ---------- */
+
+  .alert{
+    margin-top:16px;
+    padding:16px 20px;
+    border-radius: var(--radius-md);
+    background: rgba(53,226,154,0.09);
+    border:1px solid rgba(53,226,154,0.3);
+    color: var(--ok);
+    font-weight:600;
+    font-size:14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .alert.danger{
+    background: rgba(255,92,114,0.10);
+    border-color: rgba(255,92,114,0.4);
+    color: var(--danger);
+  }
+
+  /* ---------- Info panel ---------- */
+
+  .info-panel{
+    margin-top:16px;
+  }
+
+  .info-panel h3{
+    font-size:14px;
+    font-weight:600;
+    margin-bottom:12px;
+  }
+
+  .info-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .info-item{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    font-size:13px;
+    color:var(--text-dim);
+    line-height:1.5;
+  }
+
+  .info-item .check{
+    color:var(--violet-bright);
+    flex-shrink:0;
+    margin-top:1px;
+  }
+
+  @media (max-width: 900px){
+    .dashboard{ grid-template-columns: 1fr; }
+    .status-bar{ border-radius: var(--radius-md); }
+  }
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="brand-row">
+    <div>
+      <div class="wordmark">ResQ<span>Twin</span></div>
+      <div class="tagline">Adaptive digital twin for the rescue robot's live environment</div>
+    </div>
+    <div class="header-meta">
+      <div class="clock mono" id="clock">--:--:--</div>
+      <div>local time</div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="status-bar">
+    <div class="chip-group">
+      <div>
+        <div class="chip-label">Robot ID</div>
+        <div class="chip-value mono" id="robot-id">RQT-01</div>
+      </div>
+      <div>
+        <div class="chip-label">Last update</div>
+        <div class="chip-value mono" id="last-update">--</div>
+      </div>
+    </div>
+    <span class="status-pill connecting" id="status-pill">
+      <span class="dot"></span>
+      <span id="status">CONNECTING</span>
+    </span>
+  </div>
+
+  <div class="dashboard">
+
+    <!-- MAP -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Digital twin environment</h2>
+        <span class="sub">live position &amp; hazard field</span>
+      </div>
+
+      <div class="map-wrap" id="map">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+        <div class="robot" id="robot"></div>
+        <div class="hazard" id="hazard" style="display:none;"></div>
+      </div>
+
+      <div class="coord-row">
+        <div class="coord-tile">
+          <div class="k">X position</div>
+          <div class="v mono" id="x">--</div>
+        </div>
+        <div class="coord-tile">
+          <div class="k">Y position</div>
+          <div class="v mono" id="y">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDE COLUMN -->
+    <div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Environmental sensors</h2>
+        </div>
+
+        <div class="sensor-list">
+          <div class="sensor">
+            <div class="sensor-left">
+              <span class="sensor-dot" id="dot-temperature"></span>
+              <span class="sensor-label">Temperature</span>
+            </div>
+            <div class="sensor-value mono"><span id="temperature">--</span><span class="unit">°C</span></div>
+          </div>
+
+          <div class="sensor">
+            <div class="sensor-left">
+              <span class="sensor-dot" id="dot-humidity"></span>
+              <span class="sensor-label">Humidity</span>
+            </div>
+            <div class="sensor-value mono"><span id="humidity">--</span><span class="unit">%</span></div>
+          </div>
+
+          <div class="sensor">
+            <div class="sensor-left">
+              <span class="sensor-dot" id="dot-gas"></span>
+              <span class="sensor-label">Gas</span>
+            </div>
+            <div class="sensor-value mono"><span id="gas">--</span></div>
+          </div>
+
+          <div class="sensor">
+            <div class="sensor-left">
+              <span class="sensor-dot" id="dot-smoke"></span>
+              <span class="sensor-label">Smoke</span>
+            </div>
+            <div class="sensor-value mono"><span id="smoke">--</span></div>
+          </div>
+
+          <div class="sensor">
+            <div class="sensor-left">
+              <span class="sensor-dot" id="dot-distance"></span>
+              <span class="sensor-label">Obstacle distance</span>
+            </div>
+            <div class="sensor-value mono"><span id="distance">--</span><span class="unit">cm</span></div>
+          </div>
+        </div>
+
+        <div class="alert" id="alert">
+          <span>✓</span>
+          <span>No hazards detected</span>
+        </div>
+      </div>
+
+      <div class="panel info-panel">
+        <h3>System notes</h3>
+        <div class="info-list">
+          <div class="info-item">
+            <span class="check">✓</span>
+            <span>ResQTwin continuously receives robot telemetry and mirrors it onto the virtual environment above.</span>
+          </div>
+          <div class="info-item">
+            <span class="check">✓</span>
+            <span>Hazard conditions are inferred from environmental and obstacle-distance readings in real time.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+
+  const API_URL = "http://127.0.0.1:8000/robot";
+
+  // thresholds used only for the small status dots — purely visual triage
+  const THRESHOLDS = {
+    temperature: { warn: 45, danger: 60 },
+    gas:         { warn: 400, danger: 700 },
+    smoke:       { warn: 400, danger: 700 },
+    distance:    { warn: 20,  danger: 10, invert: true } // lower = worse
+  };
+
+  function setDot(id, value, key){
+    const el = document.getElementById(id);
+    if (!el || value === undefined || value === null) return;
+    const t = THRESHOLDS[key];
+    if (!t) return;
+    let level = "ok";
+    if (t.invert){
+      if (value <= t.danger) level = "danger";
+      else if (value <= t.warn) level = "warn";
+    } else {
+      if (value >= t.danger) level = "danger";
+      else if (value >= t.warn) level = "warn";
+    }
+    el.className = "sensor-dot" + (level !== "ok" ? " " + level : "");
+  }
+
+  function updateClock(){
+    const now = new Date();
+    document.getElementById("clock").textContent = now.toLocaleTimeString();
+  }
+
+  function setStatusPill(text){
+    const pill = document.getElementById("status-pill");
+    const label = document.getElementById("status");
+    label.textContent = text;
+    pill.classList.remove("offline", "connecting");
+    if (text === "OFFLINE") pill.classList.add("offline");
+    else if (text !== "ONLINE") pill.classList.add("connecting");
+  }
+
+  async function updateDigitalTwin() {
+    try {
+      const response = await fetch(API_URL);
+      const data = await response.json();
+
+      // Robot information
+      document.getElementById("robot-id").textContent = data.id;
+      setStatusPill(data.status);
+      document.getElementById("last-update").textContent = new Date().toLocaleTimeString();
+
+      // Position
+      document.getElementById("x").textContent = data.x.toFixed(1);
+      document.getElementById("y").textContent = data.y.toFixed(1);
+
+      // Sensors
+      document.getElementById("temperature").textContent = data.temperature;
+      document.getElementById("humidity").textContent = data.humidity;
+      document.getElementById("gas").textContent = data.gas;
+      document.getElementById("smoke").textContent = data.smoke;
+      document.getElementById("distance").textContent = data.distance;
+
+      setDot("dot-temperature", data.temperature, "temperature");
+      setDot("dot-gas", data.gas, "gas");
+      setDot("dot-smoke", data.smoke, "smoke");
+      setDot("dot-distance", data.distance, "distance");
+
+      // Robot position on map
+      const robot = document.getElementById("robot");
+      robot.style.left = data.x + "%";
+      robot.style.top = data.y + "%";
+
+      // Hazard
+      const hazard = document.getElementById("hazard");
+      const alert = document.getElementById("alert");
+
+      if (data.hazard) {
+        alert.innerHTML = "<span>⚠</span><span>Hazard detected — " + data.hazard_type + "</span>";
+        alert.classList.add("danger");
+
+        hazard.style.display = "flex";
+        hazard.style.left = data.x + "%";
+        hazard.style.top = data.y + "%";
+      } else {
+        alert.innerHTML = "<span>✓</span><span>No hazards detected</span>";
+        alert.classList.remove("danger");
+        hazard.style.display = "none";
+      }
+
+    } catch (error) {
+      setStatusPill("OFFLINE");
+      console.error("Connection error:", error);
+    }
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  updateDigitalTwin();
+  setInterval(updateDigitalTwin, 1000);
+
+</script>
+
+</body>
+</html>
