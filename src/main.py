@@ -2,24 +2,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pathlib import Path
+from datetime import datetime
 import random
 import time
-
-
-# ============================================================
-# RESQTWIN APPLICATION
-# ============================================================
 
 app = FastAPI(
     title="ResQTwin",
     description="Adaptive Digital Twin Rescue Robot",
     version="1.0.0"
 )
-
-
-# ============================================================
-# CORS
-# ============================================================
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,91 +20,121 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# ============================================================
-# FRONTEND PATH
-# ============================================================
-
 BASE_DIR = Path(__file__).resolve().parent
 
 
 # ============================================================
-# ROBOT DIGITAL TWIN
+# ROBOT STATE
 # ============================================================
 
 robot = {
     "id": "RQT-01",
-
-    # Position
     "x": 50.0,
     "y": 50.0,
-
-    # Environmental sensors
     "temperature": 28.0,
     "humidity": 55.0,
     "gas": 120,
     "smoke": 40,
-
-    # Obstacle sensor
     "distance": 100,
-
-    # Robot status
     "status": "ONLINE",
-
-    # Hazard information
     "hazard": False,
     "hazard_type": "NONE"
 }
 
 
 # ============================================================
-# SIMULATION SETTINGS
+# SIMULATION STATE
 # ============================================================
 
-# Probability of entering a hazard state
 HAZARD_PROBABILITY = 0.04
-
-# Number of seconds a simulated hazard lasts
 HAZARD_DURATION = 8
 
 hazard_active_until = 0
 current_hazard = "NONE"
 
+# Manual simulation overrides automatic simulation
+manual_hazard = None
+
 
 # ============================================================
-# GENERATE NORMAL SENSOR DATA
+# EVENT HISTORY
+# ============================================================
+
+event_history = []
+last_logged_hazard = "NONE"
+
+
+def create_event(event_type, status="DETECTED"):
+
+    event = {
+        "timestamp": datetime.now().strftime("%H:%M:%S"),
+        "type": event_type,
+        "status": status,
+        "x": round(robot["x"], 1),
+        "y": round(robot["y"], 1)
+    }
+
+    event_history.insert(0, event)
+
+    # Keep only the latest 20 events
+    if len(event_history) > 20:
+        event_history.pop()
+
+
+def log_hazard_change():
+
+    global last_logged_hazard
+
+    current = robot["hazard_type"]
+
+    # New hazard
+    if current != "NONE" and current != last_logged_hazard:
+
+        create_event(
+            current,
+            "DETECTED"
+        )
+
+    # Hazard cleared
+    elif current == "NONE" and last_logged_hazard != "NONE":
+
+        create_event(
+            last_logged_hazard,
+            "CLEARED"
+        )
+
+    last_logged_hazard = current
+
+
+# ============================================================
+# NORMAL ENVIRONMENT
 # ============================================================
 
 def generate_normal_environment():
 
     robot["temperature"] = round(
-        random.uniform(24, 34),
-        1
+        random.uniform(24, 34), 1
     )
 
     robot["humidity"] = round(
-        random.uniform(40, 70),
-        1
+        random.uniform(40, 70), 1
     )
 
     robot["gas"] = random.randint(
-        80,
-        180
+        80, 180
     )
 
     robot["smoke"] = random.randint(
-        20,
-        100
+        20, 100
     )
 
     robot["distance"] = random.randint(
-        25,
-        120
+        25, 120
     )
 
 
 # ============================================================
-# GENERATE HAZARDOUS SENSOR DATA
+# HAZARD ENVIRONMENT
 # ============================================================
 
 def generate_hazard_environment(hazard_type):
@@ -121,112 +142,89 @@ def generate_hazard_environment(hazard_type):
     if hazard_type == "HIGH TEMPERATURE":
 
         robot["temperature"] = round(
-            random.uniform(42, 55),
-            1
+            random.uniform(45, 58), 1
         )
 
-        robot["humidity"] = round(
-            random.uniform(30, 50),
-            1
+        robot["humidity"] = random.uniform(
+            30, 50
         )
 
         robot["gas"] = random.randint(
-            80,
-            180
+            80, 180
         )
 
         robot["smoke"] = random.randint(
-            20,
-            100
+            250, 450
         )
 
         robot["distance"] = random.randint(
-            30,
-            100
+            30, 100
         )
-
 
     elif hazard_type == "HARMFUL GAS":
 
         robot["temperature"] = round(
-            random.uniform(25, 35),
-            1
+            random.uniform(25, 35), 1
         )
 
-        robot["humidity"] = round(
-            random.uniform(40, 70),
-            1
+        robot["humidity"] = random.uniform(
+            40, 70
         )
 
         robot["gas"] = random.randint(
-            320,
-            500
+            420, 650
         )
 
         robot["smoke"] = random.randint(
-            20,
-            100
+            20, 100
         )
 
         robot["distance"] = random.randint(
-            30,
-            100
+            30, 100
         )
-
 
     elif hazard_type == "SMOKE DETECTED":
 
         robot["temperature"] = round(
-            random.uniform(28, 38),
-            1
+            random.uniform(30, 38), 1
         )
 
-        robot["humidity"] = round(
-            random.uniform(40, 65),
-            1
+        robot["humidity"] = random.uniform(
+            40, 65
         )
 
         robot["gas"] = random.randint(
-            100,
-            200
+            100, 200
         )
 
         robot["smoke"] = random.randint(
-            220,
-            400
+            450, 650
         )
 
         robot["distance"] = random.randint(
-            30,
-            100
+            30, 100
         )
-
 
     elif hazard_type == "OBSTACLE TOO CLOSE":
 
         robot["temperature"] = round(
-            random.uniform(24, 34),
-            1
+            random.uniform(24, 34), 1
         )
 
-        robot["humidity"] = round(
-            random.uniform(40, 70),
-            1
+        robot["humidity"] = random.uniform(
+            40, 70
         )
 
         robot["gas"] = random.randint(
-            80,
-            180
+            80, 180
         )
 
         robot["smoke"] = random.randint(
-            20,
-            100
+            20, 100
         )
 
         robot["distance"] = random.randint(
-            5,
-            15
+            5, 12
         )
 
 
@@ -239,28 +237,21 @@ def detect_hazard():
     robot["hazard"] = False
     robot["hazard_type"] = "NONE"
 
-    # Temperature hazard
     if robot["temperature"] > 40:
 
         robot["hazard"] = True
         robot["hazard_type"] = "HIGH TEMPERATURE"
 
-
-    # Gas hazard
     elif robot["gas"] > 300:
 
         robot["hazard"] = True
         robot["hazard_type"] = "HARMFUL GAS"
 
-
-    # Smoke hazard
     elif robot["smoke"] > 200:
 
         robot["hazard"] = True
         robot["hazard_type"] = "SMOKE DETECTED"
 
-
-    # Obstacle hazard
     elif robot["distance"] < 20:
 
         robot["hazard"] = True
@@ -268,7 +259,7 @@ def detect_hazard():
 
 
 # ============================================================
-# UPDATE ROBOT SIMULATION
+# ROBOT UPDATE
 # ============================================================
 
 def update_robot():
@@ -276,23 +267,9 @@ def update_robot():
     global hazard_active_until
     global current_hazard
 
-
-    # --------------------------------------------------------
-    # ROBOT MOVEMENT
-    # --------------------------------------------------------
-
-    robot["x"] += random.uniform(
-        -2.0,
-        2.0
-    )
-
-    robot["y"] += random.uniform(
-        -2.0,
-        2.0
-    )
-
-
-    # Keep robot inside map
+    # Simulated robot movement
+    robot["x"] += random.uniform(-2.0, 2.0)
+    robot["y"] += random.uniform(-2.0, 2.0)
 
     robot["x"] = max(
         5.0,
@@ -306,13 +283,27 @@ def update_robot():
 
 
     # --------------------------------------------------------
-    # HAZARD STATE
+    # MANUAL SIMULATION
+    # --------------------------------------------------------
+
+    if manual_hazard:
+
+        generate_hazard_environment(
+            manual_hazard
+        )
+
+        detect_hazard()
+        log_hazard_change()
+
+        return
+
+
+    # --------------------------------------------------------
+    # AUTOMATIC SIMULATION
     # --------------------------------------------------------
 
     current_time = time.time()
 
-
-    # If currently inside a simulated hazard
     if current_time < hazard_active_until:
 
         generate_hazard_environment(
@@ -321,11 +312,7 @@ def update_robot():
 
     else:
 
-        # Hazard has ended
-
         current_hazard = "NONE"
-
-        # Randomly create a new hazard
 
         if random.random() < HAZARD_PROBABILITY:
 
@@ -337,8 +324,7 @@ def update_robot():
             ])
 
             hazard_active_until = (
-                current_time +
-                HAZARD_DURATION
+                current_time + HAZARD_DURATION
             )
 
             generate_hazard_environment(
@@ -347,20 +333,92 @@ def update_robot():
 
         else:
 
-            # Normal environment
-
             generate_normal_environment()
 
 
-    # --------------------------------------------------------
-    # DETECT HAZARD
-    # --------------------------------------------------------
-
     detect_hazard()
+    log_hazard_change()
 
 
 # ============================================================
-# HOME
+# MANUAL HAZARD SIMULATION
+# ============================================================
+
+@app.post("/simulate/{hazard_type}")
+def simulate_hazard(hazard_type: str):
+
+    global manual_hazard
+    global current_hazard
+    global hazard_active_until
+
+    hazard_map = {
+
+        "fire": "HIGH TEMPERATURE",
+
+        "gas": "HARMFUL GAS",
+
+        "smoke": "SMOKE DETECTED",
+
+        "obstacle": "OBSTACLE TOO CLOSE"
+
+    }
+
+    if hazard_type not in hazard_map:
+
+        return {
+            "success": False,
+            "message": "Unknown hazard type"
+        }
+
+    manual_hazard = hazard_map[hazard_type]
+
+    current_hazard = manual_hazard
+
+    hazard_active_until = 0
+
+    generate_hazard_environment(
+        manual_hazard
+    )
+
+    detect_hazard()
+
+    log_hazard_change()
+
+    return {
+        "success": True,
+        "hazard": manual_hazard
+    }
+
+
+# ============================================================
+# RETURN TO NORMAL
+# ============================================================
+
+@app.post("/simulate/normal")
+def return_to_normal():
+
+    global manual_hazard
+    global current_hazard
+    global hazard_active_until
+
+    manual_hazard = None
+    current_hazard = "NONE"
+    hazard_active_until = 0
+
+    generate_normal_environment()
+
+    detect_hazard()
+
+    log_hazard_change()
+
+    return {
+        "success": True,
+        "status": "NORMAL"
+    }
+
+
+# ============================================================
+# BASIC ROUTES
 # ============================================================
 
 @app.get("/")
@@ -373,10 +431,6 @@ def home():
     }
 
 
-# ============================================================
-# DASHBOARD
-# ============================================================
-
 @app.get("/dashboard")
 def dashboard():
 
@@ -384,10 +438,6 @@ def dashboard():
         BASE_DIR / "frontend" / "index.html"
     )
 
-
-# ============================================================
-# ROBOT TELEMETRY API
-# ============================================================
 
 @app.get("/robot")
 def get_robot():
@@ -400,9 +450,14 @@ def get_robot():
     }
 
 
-# ============================================================
-# HEALTH CHECK
-# ============================================================
+@app.get("/events")
+def get_events():
+
+    return {
+        "count": len(event_history),
+        "events": event_history
+    }
+
 
 @app.get("/health")
 def health():
@@ -414,7 +469,7 @@ def health():
 
 
 # ============================================================
-# RUN SERVER
+# SERVER
 # ============================================================
 
 if __name__ == "__main__":
